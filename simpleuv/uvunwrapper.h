@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 #include <tuple>
 
-namespace simpleuv 
+namespace simpleuv
 {
 
 class UvUnwrapper
@@ -23,17 +23,17 @@ public:
 private:
     void partition();
     void splitPartitionToIslands(const std::vector<size_t> &group, std::vector<std::vector<size_t>> &islands);
-    void unwrapSingleIsland(const std::vector<size_t> &group, int sourcePartition, bool skipCheckHoles=false);
+    void unwrapSingleIsland(const std::vector<size_t> &group, int sourcePartition, bool skipCheckHoles = false);
     void parametrizeSingleGroup(const std::vector<Vertex> &verticies,
-        const std::vector<Face> &faces,
-        std::map<size_t, size_t> &localToGlobalFacesMap,
-        size_t faceNumToChart,
-        int sourcePartition);
-    bool fixHolesExceptTheLongestRing(const std::vector<Vertex> &verticies, std::vector<Face> &faces, size_t *remainingHoleNum=nullptr);
+                                const std::vector<Face> &faces,
+                                std::map<size_t, size_t> &localToGlobalFacesMap,
+                                size_t faceNumToChart,
+                                int sourcePartition);
+    bool fixHolesExceptTheLongestRing(const std::vector<Vertex> &verticies, std::vector<Face> &faces, size_t *remainingHoleNum = nullptr);
     void makeSeamAndCut(const std::vector<Vertex> &verticies,
-        const std::vector<Face> &faces,
-        std::map<size_t, size_t> &localToGlobalFacesMap,
-        std::vector<size_t> &firstGroup, std::vector<size_t> &secondGroup);
+                        const std::vector<Face> &faces,
+                        std::map<size_t, size_t> &localToGlobalFacesMap,
+                        std::vector<size_t> &firstGroup, std::vector<size_t> &secondGroup);
     void calculateSizeAndRemoveInvalidCharts();
     void packCharts();
     void finalizeUv();
@@ -43,9 +43,9 @@ private:
     float areaOf3dTriangle(const Eigen::Vector3d &a, const Eigen::Vector3d &b, const Eigen::Vector3d &c);
     float areaOf2dTriangle(const Eigen::Vector2d &a, const Eigen::Vector2d &b, const Eigen::Vector2d &c);
     void triangulateRing(const std::vector<Vertex> &verticies,
-        std::vector<Face> &faces, const std::vector<size_t> &ring);
+                         std::vector<Face> &faces, const std::vector<size_t> &ring);
     void calculateFaceTextureBoundingBox(const std::vector<FaceTextureCoords> &faceTextureCoords,
-        float &left, float &top, float &right, float &bottom);
+                                         float &left, float &top, float &right, float &bottom);
 
     Mesh m_mesh;
     std::vector<FaceTextureCoords> m_faceUvs;
@@ -56,7 +56,7 @@ private:
     std::vector<Rect> m_chartRects;
     std::vector<int> m_chartSourcePartitions;
     bool m_segmentByNormal = true;
-    float m_segmentDotProductThreshold = 0.0;    //90 degrees
+    float m_segmentDotProductThreshold = 0.0; //90 degrees
     float m_texelSizePerUnit = 1.0;
     float m_resultTextureSize = 0;
     bool m_segmentPreferMorePieces = true;
@@ -64,6 +64,6 @@ private:
     static const std::vector<float> m_rotateDegrees;
 };
 
-}
+} // namespace simpleuv
 
 #endif
