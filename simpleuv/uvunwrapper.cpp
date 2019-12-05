@@ -3,6 +3,7 @@
 #include <set>
 #include <queue>
 #include <cmath>
+#include <fstream>
 #include <simpleuv/uvunwrapper.h>
 #include <simpleuv/parametrize.h>
 #include <simpleuv/chartpacker.h>
@@ -23,6 +24,16 @@ void UvUnwrapper::setMesh(const Mesh &mesh)
 void UvUnwrapper::setTexelSize(float texelSize)
 {
     m_texelSizePerUnit = texelSize;
+}
+
+void UvUnwrapper::setSegmentThreshold(float threshold)
+{
+    m_segmentDotProductThreshold = threshold;
+}
+
+void UvUnwrapper::setMaxFaceNumPerIsland(int maxnum)
+{
+    m_maxFaceNumPerIsland = maxnum;
 }
 
 const std::vector<FaceTextureCoords> &UvUnwrapper::getFaceUvs() const
@@ -95,6 +106,10 @@ void UvUnwrapper::splitPartitionToIslands(const std::vector<size_t> &group, std:
                 auto findOppositeFaceResult = edgeToFaceMap.find({face.indices[j], face.indices[i]});
                 if (findOppositeFaceResult == edgeToFaceMap.end())
                     continue;
+                if (island.size() > m_maxFaceNumPerIsland)
+                {
+                    continue;
+                }
                 if (segmentByNormal)
                 {
                     if (dotProduct(m_mesh.faceNormals[findOppositeFaceResult->second],
@@ -112,6 +127,29 @@ void UvUnwrapper::splitPartitionToIslands(const std::vector<size_t> &group, std:
             continue;
         islands.push_back(island);
     }
+
+    // printf("Got %lld islands. \n", islands.size());
+    // for (int ii = 0; ii < islands.size(); ii++)
+    // {
+    //     std::string fname = std::string("./test/island_") + std::to_string(ii) + ".obj";
+    //     std::ofstream ofile(fname);
+    //     const std::vector<size_t> &island = islands[ii];
+    //     for (const auto &index : island)
+    //     {
+    //         Face f = m_mesh.faces[index];
+    //         Vertex v0 = m_mesh.vertices[f.indices[0]];
+    //         Vertex v1 = m_mesh.vertices[f.indices[1]];
+    //         Vertex v2 = m_mesh.vertices[f.indices[2]];
+    //         ofile << "v " << v0.xyz[0] << " " << v0.xyz[1] << " " << v0.xyz[2] << "\n";
+    //         ofile << "v " << v1.xyz[0] << " " << v1.xyz[1] << " " << v1.xyz[2] << "\n";
+    //         ofile << "v " << v2.xyz[0] << " " << v2.xyz[1] << " " << v2.xyz[2] << "\n";
+    //     }
+    //     for (int i = 0; i < island.size(); i++)
+    //     {
+    //         ofile << "f " << 3 * i + 1 << " " << 3 * i + 2 << " " << 3 * i + 3 << "\n";
+    //     }
+    //     ofile.close();
+    // }
 }
 
 double UvUnwrapper::distanceBetweenVertices(const Vertex &first, const Vertex &second)

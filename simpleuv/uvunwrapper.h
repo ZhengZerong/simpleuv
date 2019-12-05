@@ -14,6 +14,8 @@ class UvUnwrapper
 public:
     void setMesh(const Mesh &mesh);
     void setTexelSize(float texelSize);
+    void setSegmentThreshold(float threshold);
+    void setMaxFaceNumPerIsland(int maxnum);
     void unwrap();
     const std::vector<FaceTextureCoords> &getFaceUvs() const;
     const std::vector<Rect> &getChartRects() const;
@@ -56,7 +58,8 @@ private:
     std::vector<Rect> m_chartRects;
     std::vector<int> m_chartSourcePartitions;
     bool m_segmentByNormal = true;
-    float m_segmentDotProductThreshold = 0.0; //90 degrees
+    float m_segmentDotProductThreshold = -0.2; //90 degrees
+    int m_maxFaceNumPerIsland = 500;
     float m_texelSizePerUnit = 1.0;
     float m_resultTextureSize = 0;
     bool m_segmentPreferMorePieces = true;
