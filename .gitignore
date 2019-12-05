@@ -1,0 +1,6 @@
+*.o
+debug/
+build/
+test/
+.vscode/
+.idea/
