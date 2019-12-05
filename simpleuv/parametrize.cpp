@@ -97,12 +97,12 @@ bool parametrize(const std::vector<Vertex> &verticies,
     Eigen::VectorXi bnd;
     igl::boundary_loop(F,bnd);
     
-    {
-        Eigen::MatrixXd V_uv;
-        parametrizeUsingARAP(V, F, bnd, V_uv);
-        if (extractResult(verticies, V_uv, vertexUvs))
-            return true;
-    }
+    // {
+    //     Eigen::MatrixXd V_uv;
+    //     parametrizeUsingARAP(V, F, bnd, V_uv);
+    //     if (extractResult(verticies, V_uv, vertexUvs))
+    //         return true;
+    // }
 
     {
         Eigen::MatrixXd V_uv;
