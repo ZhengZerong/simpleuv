@@ -131,9 +131,9 @@ Mesh loadFromObjBinary(const std::string &_filename)
         else if (linedata[0] == std::string("f"))
         {
             Face f;
-            f.indices[0] = std::stoi(linedata[1]);
-            f.indices[1] = std::stoi(linedata[2]);
-            f.indices[2] = std::stoi(linedata[3]);
+            f.indices[0] = std::stoi(linedata[1]) - 1;
+            f.indices[1] = std::stoi(linedata[2]) - 1;
+            f.indices[2] = std::stoi(linedata[3]) - 1;
             m.faces.push_back(f);
         }
         else if (linedata[0] == std::string("vn"))
