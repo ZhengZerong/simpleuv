@@ -12,7 +12,8 @@ namespace simpleuv
 class UvUnwrapper
 {
 public:
-    void setMesh(const Mesh &mesh);
+    /*** set mesh as well as the partition weights (controlling the uv area of each partition) ***/
+    void setMesh(const Mesh &mesh, const std::vector<float> &partitionWeights = std::vector<float>());
     void setTexelSize(float texelSize);
     void setSegmentThreshold(float threshold);
     void setMaxFaceNumPerIsland(int maxnum);
@@ -57,9 +58,10 @@ private:
     std::vector<std::pair<float, float>> m_scaledChartSizes;
     std::vector<Rect> m_chartRects;
     std::vector<int> m_chartSourcePartitions;
+    std::vector<float> m_partitionWeights;
     bool m_segmentByNormal = true;
     float m_segmentDotProductThreshold = -0.2; //90 degrees
-    int m_maxFaceNumPerIsland = 500;
+    uint m_maxFaceNumPerIsland = 2000;
     float m_texelSizePerUnit = 1.0;
     float m_resultTextureSize = 0;
     bool m_segmentPreferMorePieces = true;

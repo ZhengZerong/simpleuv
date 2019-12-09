@@ -16,9 +16,10 @@ namespace simpleuv
 
 const std::vector<float> UvUnwrapper::m_rotateDegrees = {5, 15, 20, 25, 30, 35, 40, 45};
 
-void UvUnwrapper::setMesh(const Mesh &mesh)
+void UvUnwrapper::setMesh(const Mesh &mesh, const std::vector<float> &partitionWeights)
 {
     m_mesh = mesh;
+    m_partitionWeights = partitionWeights;
 }
 
 void UvUnwrapper::setTexelSize(float texelSize)
@@ -509,9 +510,10 @@ void UvUnwrapper::calculateSizeAndRemoveInvalidCharts()
         //qDebug() << "left:" << left << "top:" << top << "right:" << right << "bottom:" << bottom;
         //qDebug() << "width:" << size.first << "height:" << size.second;
         float ratioOfSurfaceAreaAndUvArea = uvArea > 0 ? surfaceArea / uvArea : 1.0;
-        float scale = ratioOfSurfaceAreaAndUvArea * m_texelSizePerUnit;
+        float area_scale = ratioOfSurfaceAreaAndUvArea * m_texelSizePerUnit;
+        float len_scale = std::sqrt(area_scale) * m_partitionWeights[chartSourcePartitions[chartIndex]];
         m_chartSizes.push_back(size);
-        m_scaledChartSizes.push_back(std::make_pair(size.first * scale, size.second * scale));
+        m_scaledChartSizes.push_back(std::make_pair(size.first * len_scale, size.second * len_scale));
         m_charts.push_back(chart);
         m_chartSourcePartitions.push_back(chartSourcePartitions[chartIndex]);
     }
@@ -596,6 +598,10 @@ void UvUnwrapper::partition()
         for (decltype(m_mesh.faces.size()) i = 0; i < m_mesh.faces.size(); i++)
         {
             m_partitions[0].push_back(i);
+        }
+        if (m_partitionWeights.empty())
+        {
+            m_partitionWeights.push_back(1.f);
         }
     }
     else
@@ -712,6 +718,8 @@ void UvUnwrapper::unwrap()
     m_faceUvs.resize(m_mesh.faces.size());
     for (const auto &group : m_partitions)
     {
+        if (group.second.size() == 0)
+            continue;
         std::vector<std::vector<size_t>> islands;
         splitPartitionToIslands(group.second, islands);
         for (const auto &island : islands)
