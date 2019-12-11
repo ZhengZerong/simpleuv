@@ -9,6 +9,12 @@ namespace simpleuv
 struct Vector3
 {
     float xyz[3];
+    static Vector3 zeros()
+    {
+        Vector3 r;
+        r.xyz[0] = r.xyz[1] = r.xyz[2] = 0.f;
+        return r;      
+    }
 };
 
 typedef Vector3 Vertex;

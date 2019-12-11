@@ -151,6 +151,7 @@ void UvUnwrapper::refineIslandSplitting(const std::vector<std::vector<size_t>> &
 
     std::vector<int> faceToIslandMap(m_mesh.faces.size(), -1);
     std::vector<std::vector<size_t>> islandsToMerge, islandsToMergeBuffer;
+    std::vector<Vector3> islandAverageNoraml;
     for (size_t i = 0; i < islands.size(); i++)
     {
         const auto &island = islands[i];
@@ -159,10 +160,19 @@ void UvUnwrapper::refineIslandSplitting(const std::vector<std::vector<size_t>> &
         {
             islandsRefined.push_back(island);
             islandRefinedPartitionIds.push_back(partitionId);
+            int islandId = islandsRefined.size() - 1;
+            islandAverageNoraml.push_back(Vector3::zeros());
             for (const auto &f : island)
             {
-                faceToIslandMap[f] = islandsRefined.size() - 1;
+                faceToIslandMap[f] = islandId;
+                islandAverageNoraml[islandId].xyz[0] += m_mesh.faceNormals[f].xyz[0];
+                islandAverageNoraml[islandId].xyz[1] += m_mesh.faceNormals[f].xyz[1];
+                islandAverageNoraml[islandId].xyz[2] += m_mesh.faceNormals[f].xyz[2];
             }
+            float len = sqrtf(dotProduct(islandAverageNoraml[islandId], islandAverageNoraml[islandId]));
+            islandAverageNoraml[islandId].xyz[0] /= len;
+            islandAverageNoraml[islandId].xyz[1] /= len;
+            islandAverageNoraml[islandId].xyz[2] /= len;
         }
         else
         {
@@ -172,6 +182,9 @@ void UvUnwrapper::refineIslandSplitting(const std::vector<std::vector<size_t>> &
 
     while (!islandsToMerge.empty())
     {
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(islandsToMerge.begin(), islandsToMerge.end(), g);
         size_t prevNumOfIslandToMerge = islandsToMerge.size();
         for (int i = islandsToMerge.size() - 1; i >= 0; i--)
         {
@@ -193,6 +206,7 @@ void UvUnwrapper::refineIslandSplitting(const std::vector<std::vector<size_t>> &
                 {
                     const auto &index = faceToMerge[j];
                     const auto &face = m_mesh.faces[index];
+                    const auto &faceNormal = m_mesh.faceNormals[index];
                     int oppositeFaceIslandIds[3] = {-1, -1, -1};
                     for (size_t i = 0; i < 3; i++)
                     {
@@ -210,36 +224,25 @@ void UvUnwrapper::refineIslandSplitting(const std::vector<std::vector<size_t>> &
                     }
                     else
                     {
-                        if (oppositeFaceIslandIds[0] > 0 && oppositeFaceIslandIds[0] == oppositeFaceIslandIds[1])
+                        int candidateId = -1;
+                        float maxCosine = -9999;
+                        if (oppositeFaceIslandIds[0] >= 0 && dotProduct(faceNormal, islandAverageNoraml[oppositeFaceIslandIds[0]]) > maxCosine)
                         {
-                            islandsRefined[oppositeFaceIslandIds[0]].push_back(index);
-                            faceToIslandMap[index] = oppositeFaceIslandIds[0];
+                            candidateId = oppositeFaceIslandIds[0];
+                            maxCosine = dotProduct(faceNormal, islandAverageNoraml[oppositeFaceIslandIds[0]]);
                         }
-                        else if (oppositeFaceIslandIds[0] > 0 && oppositeFaceIslandIds[0] == oppositeFaceIslandIds[2])
+                        if (oppositeFaceIslandIds[1] >= 0 && dotProduct(faceNormal, islandAverageNoraml[oppositeFaceIslandIds[1]]) > maxCosine)
                         {
-                            islandsRefined[oppositeFaceIslandIds[0]].push_back(index);
-                            faceToIslandMap[index] = oppositeFaceIslandIds[0];
+                            candidateId = oppositeFaceIslandIds[1];
+                            maxCosine = dotProduct(faceNormal, islandAverageNoraml[oppositeFaceIslandIds[1]]);
                         }
-                        else if (oppositeFaceIslandIds[1] > 0 && oppositeFaceIslandIds[1] == oppositeFaceIslandIds[2])
+                        if (oppositeFaceIslandIds[2] >= 0 && dotProduct(faceNormal, islandAverageNoraml[oppositeFaceIslandIds[2]]) > maxCosine)
                         {
-                            islandsRefined[oppositeFaceIslandIds[1]].push_back(index);
-                            faceToIslandMap[index] = oppositeFaceIslandIds[1];
+                            candidateId = oppositeFaceIslandIds[2];
+                            maxCosine = dotProduct(faceNormal, islandAverageNoraml[oppositeFaceIslandIds[2]]);
                         }
-                        else if (oppositeFaceIslandIds[0] > 0)
-                        {
-                            islandsRefined[oppositeFaceIslandIds[0]].push_back(index);
-                            faceToIslandMap[index] = oppositeFaceIslandIds[0];
-                        }
-                        else if (oppositeFaceIslandIds[1] > 0)
-                        {
-                            islandsRefined[oppositeFaceIslandIds[1]].push_back(index);
-                            faceToIslandMap[index] = oppositeFaceIslandIds[1];
-                        }
-                        else if (oppositeFaceIslandIds[2] > 0)
-                        {
-                            islandsRefined[oppositeFaceIslandIds[2]].push_back(index);
-                            faceToIslandMap[index] = oppositeFaceIslandIds[2];
-                        }
+                        islandsRefined[candidateId].push_back(index);
+                        faceToIslandMap[index] = candidateId;
                     }
                     faceToMerge.pop_back();
                 }
