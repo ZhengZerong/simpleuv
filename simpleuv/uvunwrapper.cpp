@@ -1,3 +1,4 @@
+#include <iostream>
 #include <map>
 #include <unordered_set>
 #include <set>
@@ -35,6 +36,11 @@ void UvUnwrapper::setSegmentThreshold(float threshold)
 void UvUnwrapper::setMaxFaceNumPerIsland(int maxnum)
 {
     m_maxFaceNumPerIsland = maxnum;
+}
+
+void UvUnwrapper::setMinIslandSize(int islandsize)
+{
+    m_minIslandSize = islandsize;
 }
 
 const std::vector<FaceTextureCoords> &UvUnwrapper::getFaceUvs() const
@@ -123,34 +129,148 @@ void UvUnwrapper::splitPartitionToIslands(const std::vector<size_t> &group, std:
             }
             island.push_back(index);
             processedFaces.insert(index);
+            // if (island.size() > m_maxFaceNumPerIsland)
+            // {
+            //     break;
+            // }
         }
         if (island.empty())
             continue;
         islands.push_back(island);
     }
+}
 
-    // printf("Got %lld islands. \n", islands.size());
-    // for (int ii = 0; ii < islands.size(); ii++)
-    // {
-    //     std::string fname = std::string("./test/island_") + std::to_string(ii) + ".obj";
-    //     std::ofstream ofile(fname);
-    //     const std::vector<size_t> &island = islands[ii];
-    //     for (const auto &index : island)
-    //     {
-    //         Face f = m_mesh.faces[index];
-    //         Vertex v0 = m_mesh.vertices[f.indices[0]];
-    //         Vertex v1 = m_mesh.vertices[f.indices[1]];
-    //         Vertex v2 = m_mesh.vertices[f.indices[2]];
-    //         ofile << "v " << v0.xyz[0] << " " << v0.xyz[1] << " " << v0.xyz[2] << "\n";
-    //         ofile << "v " << v1.xyz[0] << " " << v1.xyz[1] << " " << v1.xyz[2] << "\n";
-    //         ofile << "v " << v2.xyz[0] << " " << v2.xyz[1] << " " << v2.xyz[2] << "\n";
-    //     }
-    //     for (int i = 0; i < island.size(); i++)
-    //     {
-    //         ofile << "f " << 3 * i + 1 << " " << 3 * i + 2 << " " << 3 * i + 3 << "\n";
-    //     }
-    //     ofile.close();
-    // }
+void UvUnwrapper::refineIslandSplitting(const std::vector<std::vector<size_t>> &islands,
+                                        const std::vector<int> &islandPartitionIds,
+                                        std::vector<std::vector<size_t>> &islandsRefined,
+                                        std::vector<int> &islandRefinedPartitionIds)
+{
+    std::map<std::pair<size_t, size_t>, size_t> edgeToFaceMap;
+    buildEdgeToFaceMap(m_mesh.faces, edgeToFaceMap);
+
+    std::vector<int> faceToIslandMap(m_mesh.faces.size(), -1);
+    std::vector<std::vector<size_t>> islandsToMerge, islandsToMergeBuffer;
+    for (size_t i = 0; i < islands.size(); i++)
+    {
+        const auto &island = islands[i];
+        const auto &partitionId = islandPartitionIds[i];
+        if (island.size() > m_minIslandSize)
+        {
+            islandsRefined.push_back(island);
+            islandRefinedPartitionIds.push_back(partitionId);
+            for (const auto &f : island)
+            {
+                faceToIslandMap[f] = islandsRefined.size() - 1;
+            }
+        }
+        else
+        {
+            islandsToMerge.push_back(island);
+        }
+    }
+
+    while (!islandsToMerge.empty())
+    {
+        size_t prevNumOfIslandToMerge = islandsToMerge.size();
+        for (int i = islandsToMerge.size() - 1; i >= 0; i--)
+        {
+            const auto &island = islandsToMerge.back();
+            std::vector<size_t> faceToMerge, faceToMergeBuffer;
+            for (const auto &f : island)
+            {
+                faceToMerge.push_back(f);
+            }
+
+            while (!faceToMerge.empty())
+            {
+                size_t prevNumOfFaceToMerge = faceToMerge.size();
+
+                for (int j = faceToMerge.size() - 1; j >= 0; j--)
+                {
+                    const auto &index = faceToMerge[j];
+                    const auto &face = m_mesh.faces[index];
+                    int oppositeFaceIslandIds[3] = {-1, -1, -1};
+                    for (size_t i = 0; i < 3; i++)
+                    {
+                        size_t j = (i + 1) % 3;
+                        auto findOppositeFaceResult = edgeToFaceMap.find({face.indices[j], face.indices[i]});
+                        if (findOppositeFaceResult == edgeToFaceMap.end())
+                            continue;
+                        oppositeFaceIslandIds[i] = faceToIslandMap[findOppositeFaceResult->second];
+                    }
+
+                    if (oppositeFaceIslandIds[0] < 0 && oppositeFaceIslandIds[1] < 0 && oppositeFaceIslandIds[2] < 0)
+                    {
+                        faceToMergeBuffer.push_back(index);
+                        continue;
+                    }
+                    else
+                    {
+                        if (oppositeFaceIslandIds[0] > 0 && oppositeFaceIslandIds[0] == oppositeFaceIslandIds[1])
+                        {
+                            islandsRefined[oppositeFaceIslandIds[0]].push_back(index);
+                            faceToIslandMap[index] = oppositeFaceIslandIds[0];
+                        }
+                        else if (oppositeFaceIslandIds[0] > 0 && oppositeFaceIslandIds[0] == oppositeFaceIslandIds[2])
+                        {
+                            islandsRefined[oppositeFaceIslandIds[0]].push_back(index);
+                            faceToIslandMap[index] = oppositeFaceIslandIds[0];
+                        }
+                        else if (oppositeFaceIslandIds[1] > 0 && oppositeFaceIslandIds[1] == oppositeFaceIslandIds[2])
+                        {
+                            islandsRefined[oppositeFaceIslandIds[1]].push_back(index);
+                            faceToIslandMap[index] = oppositeFaceIslandIds[1];
+                        }
+                        else if (oppositeFaceIslandIds[0] > 0)
+                        {
+                            islandsRefined[oppositeFaceIslandIds[0]].push_back(index);
+                            faceToIslandMap[index] = oppositeFaceIslandIds[0];
+                        }
+                        else if (oppositeFaceIslandIds[1] > 0)
+                        {
+                            islandsRefined[oppositeFaceIslandIds[1]].push_back(index);
+                            faceToIslandMap[index] = oppositeFaceIslandIds[1];
+                        }
+                        else if (oppositeFaceIslandIds[2] > 0)
+                        {
+                            islandsRefined[oppositeFaceIslandIds[2]].push_back(index);
+                            faceToIslandMap[index] = oppositeFaceIslandIds[2];
+                        }
+                    }
+                    faceToMerge.pop_back();
+                }
+
+                std::swap(faceToMerge, faceToMergeBuffer);
+                faceToMergeBuffer.clear();
+                if (faceToMerge.size() == prevNumOfFaceToMerge)
+                {
+                    printf("Failed to merge a fragement of size %lld!!\n", faceToMerge.size());
+                    break;
+                }
+            }
+            if (!faceToMerge.empty())
+            {
+                islandsToMergeBuffer.push_back(faceToMerge);
+            }
+            islandsToMerge.pop_back();
+        }
+
+        std::swap(islandsToMerge, islandsToMergeBuffer);
+        if (islandsToMerge.size() == prevNumOfIslandToMerge)
+        {
+            printf("Failed to merge %lld island(s) !!\n", islandsToMerge.size());
+            break;
+        }
+    }
+
+    if (!islandsToMerge.empty())
+    {
+        for (const auto &i : islandsToMerge)
+        {
+            islandsRefined.push_back(i);
+            islandRefinedPartitionIds.push_back(m_mesh.facePartitions[i[0]]);
+        }
+    }
 }
 
 double UvUnwrapper::distanceBetweenVertices(const Vertex &first, const Vertex &second)
@@ -715,16 +835,32 @@ void UvUnwrapper::unwrap()
 {
     partition();
 
-    m_faceUvs.resize(m_mesh.faces.size());
+    // m_faceUvs.resize(m_mesh.faces.size());
+    // for (const auto &group : m_partitions)
+    // {
+    //     if (group.second.size() == 0)
+    //         continue;
+    //     std::vector<std::vector<size_t>> islands;
+    //     splitPartitionToIslands(group.second, islands);
+    //     for (const auto &island : islands)
+    //         unwrapSingleIsland(island, group.first);
+    // }
+    std::vector<std::vector<size_t>> islands, islandsRefined;
+    std::vector<int> islandPartitionIds, islandPartitionRefinedIds;
     for (const auto &group : m_partitions)
     {
         if (group.second.size() == 0)
             continue;
-        std::vector<std::vector<size_t>> islands;
         splitPartitionToIslands(group.second, islands);
-        for (const auto &island : islands)
-            unwrapSingleIsland(island, group.first);
+        while (islandPartitionIds.size() < islands.size())
+            islandPartitionIds.push_back(group.first);
     }
+    refineIslandSplitting(islands, islandPartitionIds, islandsRefined, islandPartitionRefinedIds);
+    std::swap(islands, islandsRefined);
+    std::swap(islandPartitionIds, islandPartitionRefinedIds);
+
+    for (size_t i = 0; i < islands.size(); i++)
+        unwrapSingleIsland(islands[i], islandPartitionIds[i]);
 
     calculateSizeAndRemoveInvalidCharts();
     packCharts();

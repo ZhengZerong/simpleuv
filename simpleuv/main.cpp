@@ -17,6 +17,7 @@ int main(int argc, char **argv)
         std::cout << "*                    [path/to/partition/weights/file=None]";
         std::cout << "*                    [max_face_num_per_island=2000]";
         std::cout << "*                    [normal_segment_threshold=-0.2]";
+        std::cout << "*                    [min_island_size=-0.2]";
         std::cout << "*****************************************************************\n";
         return -1;
     }
@@ -69,6 +70,8 @@ int main(int argc, char **argv)
         wrapper.setMaxFaceNumPerIsland(std::stoi(argv[5]));
     if (argc >= 7)
         wrapper.setSegmentThreshold(std::stof(argv[6]));
+    if (argc >= 8)
+        wrapper.setMinIslandSize(std::stoi(argv[7]));
     wrapper.unwrap();
     std::vector<simpleuv::FaceTextureCoords> face_texture_coords = wrapper.getFaceUvs();
     std::vector<simpleuv::Rect> chart_rects = wrapper.getChartRects();
@@ -87,4 +90,5 @@ int main(int argc, char **argv)
         ofile << std::endl;
     }
     ofile.close();
+    printf("Uv unwrapping done. \n");
 }

@@ -17,6 +17,7 @@ public:
     void setTexelSize(float texelSize);
     void setSegmentThreshold(float threshold);
     void setMaxFaceNumPerIsland(int maxnum);
+    void setMinIslandSize(int islandsize);
     void unwrap();
     const std::vector<FaceTextureCoords> &getFaceUvs() const;
     const std::vector<Rect> &getChartRects() const;
@@ -26,6 +27,8 @@ public:
 private:
     void partition();
     void splitPartitionToIslands(const std::vector<size_t> &group, std::vector<std::vector<size_t>> &islands);
+    void refineIslandSplitting(const std::vector<std::vector<size_t>> &islands, const std::vector<int> &islandPartitionIds,
+                               std::vector<std::vector<size_t>> &islandsRefined, std::vector<int> &islandRefinedPartitionIds);
     void unwrapSingleIsland(const std::vector<size_t> &group, int sourcePartition, bool skipCheckHoles = false);
     void parametrizeSingleGroup(const std::vector<Vertex> &verticies,
                                 const std::vector<Face> &faces,
@@ -66,6 +69,7 @@ private:
     float m_resultTextureSize = 0;
     bool m_segmentPreferMorePieces = true;
     bool m_enableRotation = true;
+    int m_minIslandSize = 16;
     static const std::vector<float> m_rotateDegrees;
 };
 
