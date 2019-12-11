@@ -1,3 +1,4 @@
+#include <random>
 #include <iostream>
 #include <map>
 #include <unordered_set>
@@ -183,6 +184,9 @@ void UvUnwrapper::refineIslandSplitting(const std::vector<std::vector<size_t>> &
 
             while (!faceToMerge.empty())
             {
+                std::random_device rd;
+                std::mt19937 g(rd());
+                std::shuffle(faceToMerge.begin(), faceToMerge.end(), g);
                 size_t prevNumOfFaceToMerge = faceToMerge.size();
 
                 for (int j = faceToMerge.size() - 1; j >= 0; j--)
